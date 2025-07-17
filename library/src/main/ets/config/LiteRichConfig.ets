@@ -10,12 +10,12 @@
 import type { LiteRichOptions } from '../types/LiteRichTypes';
 
 export class LiteRichConfig {
-  // ✅ 默认配置值
+  // ✅ 默认配置值 - 修复行高
   public maxContentLength: number = 50000;
   public textAlign: TextAlign = TextAlign.Start;
   public maxLines: number = -1; // 无限制
   public textOverflow: TextOverflowOptions = { overflow: TextOverflow.Ellipsis };
-  public lineHeight: number | string | Resource = 1.4;
+  public lineHeight: number | string | Resource = 1.6; // ✅ 增加默认行高，避免重叠
   public fontSize: number | string | Resource = 16;
   public fontColor: ResourceColor = '#333333';
   public fontFamily: string | Resource = 'HarmonyOS Sans';
@@ -186,7 +186,7 @@ export class LiteRichConfig {
     this.textAlign = TextAlign.Start;
     this.maxLines = -1;
     this.textOverflow = { overflow: TextOverflow.Ellipsis };
-    this.lineHeight = 1.4;
+    this.lineHeight = 1.6; // ✅ 修复默认行高
     this.fontSize = 16;
     this.fontColor = '#333333';
     this.fontFamily = 'HarmonyOS Sans';

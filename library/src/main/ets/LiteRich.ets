@@ -15,20 +15,25 @@ import { StyledStringBuilder } from './builder/StyledStringBuilder';
 import { LogUtil } from './utils/LogUtil';
 import type { LiteRichOptions, ParsedElement, RenderContext } from './types/LiteRichTypes';
 
-
 @Component
 export struct LiteRich {
   // ✅ 最小化状态变量数量
   @State private loading: boolean = false;
   @State private styledString: StyledString = new StyledString('');
+  
   // ✅ 配置和管理器实例
   private readonly config: LiteRichConfig = new LiteRichConfig();
   private readonly styleManager: TagStyleManager = new TagStyleManager();
   private readonly htmlParser: HtmlParser = new HtmlParser();
   private readonly stringBuilder: StyledStringBuilder = new StyledStringBuilder();
+  
   // ✅ 缓存机制
   private parsedContent: string = '';
   private textController: TextController = new TextController();
+  
+  // ✅ 新增：标记Text组件是否已准备好
+  @State private textReady: boolean = false;
+  
   // ✅ 组件参数
   @Prop @Watch('onTextChange') text: string = '';
   @Prop options?: LiteRichOptions;
@@ -62,8 +67,8 @@ export struct LiteRich {
       }
     }
 
-    // 初始解析
-    this.parseAndRender();
+    // ✅ 延迟解析，等待Text组件准备好
+    // this.parseAndRender();
   }
 
   /**
@@ -72,7 +77,6 @@ export struct LiteRich {
   private cleanup(): void {
     this.styleManager.clear();
     this.htmlParser.clear();
-    // this.stringBuilder.clear();
   }
 
   /**
@@ -82,6 +86,15 @@ export struct LiteRich {
     if (this.text !== this.parsedContent) {
       this.parseAndRender();
     }
+  }
+
+  /**
+   * ✅ 新增：Text组件准备完成回调
+   */
+  private onTextReady(): void {
+    this.textReady = true;
+    // Text组件准备好后，开始解析
+    this.parseAndRender();
   }
 
   /**
@@ -100,6 +113,8 @@ export struct LiteRich {
       if (currentText.length === 0) {
         this.styledString = new StyledString('');
         this.parsedContent = '';
+        // ✅ 安全调用setStyledString
+        this.safeSetStyledString(this.styledString);
         return;
       }
 
@@ -107,6 +122,8 @@ export struct LiteRich {
       if (this.isPlainText(currentText)) {
         this.styledString = new StyledString(currentText);
         this.parsedContent = currentText;
+        // ✅ 安全调用setStyledString
+        this.safeSetStyledString(this.styledString);
         return;
       }
 
@@ -134,8 +151,9 @@ export struct LiteRich {
 
       this.styledString = this.stringBuilder.build(parsedElements, renderContext);
       LogUtil.debug("HtmlParser", "StyledString：" + JSON.stringify(this.styledString))
-      // 绑定到Text组件
-      this.textController.setStyledString(this.styledString);
+      
+      // ✅ 安全调用setStyledString
+      this.safeSetStyledString(this.styledString);
 
       this.loading = false;
 
@@ -144,6 +162,26 @@ export struct LiteRich {
     } catch (error) {
       LogUtil.error('HtmlParser', `解析异常: ${JSON.stringify(error)}`);
       this.fallbackToPlainText(this.text || '');
+    }
+  }
+
+  /**
+   * ✅ 新增：安全调用setStyledString方法
+   */
+  private safeSetStyledString(styledString: StyledString): void {
+    if (this.textReady) {
+      try {
+        this.textController.setStyledString(styledString);
+        LogUtil.debug('LiteRich', 'setStyledString调用成功');
+      } catch (error) {
+        LogUtil.error('LiteRich', `setStyledString调用失败: ${JSON.stringify(error)}`);
+        // 降级处理：直接更新状态变量
+        this.styledString = styledString;
+      }
+    } else {
+      LogUtil.debug('LiteRich', 'Text组件未准备好，延迟设置StyledString');
+      // Text组件未准备好，直接更新状态变量
+      this.styledString = styledString;
     }
   }
 
@@ -161,7 +199,8 @@ export struct LiteRich {
    */
   private fallbackToPlainText(content: string): void {
     this.styledString = new StyledString(content);
-    this.textController.setStyledString(this.styledString);
+    // ✅ 安全调用setStyledString
+    this.safeSetStyledString(this.styledString);
     this.loading = false;
   }
 
@@ -181,19 +220,35 @@ export struct LiteRich {
         .justifyContent(FlexAlign.Center)
         .padding(16)
       } else {
-        // ✅ 主要内容区域 - 正确的Text组件controller使用方式
+        // ✅ 修复文字重叠问题
         Text(undefined, { controller: this.textController })
           .width('100%')
           .textAlign(this.config.textAlign)
           .maxLines(this.config.maxLines)
           .textOverflow(this.config.textOverflow)
-          .lineHeight(this.config.lineHeight)
+          .lineHeight(this.getAdjustedLineHeight()) // ✅ 使用调整后的行高
           .fontSize(this.config.fontSize)
           .fontColor(this.config.fontColor)
           .fontFamily(this.config.fontFamily)
+          .padding({ top: 2, bottom: 2 }) // ✅ 添加垂直内边距
+          .onAppear(() => {
+            // ✅ Text组件渲染完成后的回调
+            this.onTextReady();
+          })
       }
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
+  }
+
+  /**
+   * ✅ 新增：获取调整后的行高
+   */
+  private getAdjustedLineHeight(): number | string | Resource {
+    // 确保行高足够，避免文字重叠
+    if (typeof this.config.lineHeight === 'number') {
+      return Math.max(1.6, this.config.lineHeight); // 最小行高1.6
+    }
+    return this.config.lineHeight;
   }
 }
