@@ -10,8 +10,6 @@
 import { ParsedElement, RenderContext, BuildOptions, GestureStyle } from '../types/LiteRichTypes';
 import { LogUtil } from '../utils/LogUtil';
 
-// 导入鸿蒙官方类型
-
 /**
  * 构建结果接口
  */
@@ -89,14 +87,14 @@ export class StyledStringBuilder {
       // 应用事件处理
       this.applyEventHandlers(mutableStyledString, buildResult.events);
 
-      LogUtil.debug('StyledStringBuilder',
+      LogUtil.debug("HtmlParser", 'StyledStringBuilder',
         `构建完成，文本长度: ${buildResult.text.length}, 样式数量: ${buildResult.styles.length}`);
 
       // 直接返回MutableStyledString对象
       return mutableStyledString;
 
     } catch (error) {
-      LogUtil.error('StyledStringBuilder', `构建失败: ${JSON.stringify(error)}`);
+      LogUtil.error("HtmlParser", 'StyledStringBuilder', `构建失败: ${JSON.stringify(error)}`);
 
       // 降级处理：返回纯文本
       const fallbackText = this.extractPlainText(elements);

@@ -8,8 +8,8 @@
  */
 
 export class LogUtil {
-  private static debugEnabled: boolean = false;
-  private static readonly LOG_TAG: string = 'LiteRich';
+  private static debugEnabled: boolean = true;
+  private static readonly LOG_TAG: string = 'LiteRichTag';
   
   /**
    * 设置调试模式
